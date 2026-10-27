@@ -86,7 +86,7 @@ def main():
     qasm_circuit = transpile(measurement_circuit(compiled, model.n),
                             basis_gates=["u3", "cx"], optimization_level=0)
     (args.output / "circuit.qasm").write_text(qasm2.dumps(qasm_circuit))
-    (args.output / "circuit.txt").write_text(str(prepared.circuit.draw(output="text", fold=-1)))
+    (args.output / "circuit.txt").write_text(str(prepared.circuit.draw(output="text", fold=-1)), encoding="utf-8")
     report = {
         "method": "exact spectral purification; exponential reference, ideal simulator",
         "image": model.image.tolist(), "n_pixels": model.n, "qubits": 2 * model.n,

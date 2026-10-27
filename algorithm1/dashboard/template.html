@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Correlation-NN Results</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --raised: #1c2128; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --blue: #58a6ff; --green: #3fb950;
+    --gray: #6e7681; --yellow: #d29922; --red: #f85149; --purple: #bc8cff;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 40px 0 6px; }
+  .sub { color: var(--muted); margin: 0; }
+  .lead { color: var(--muted); margin: 0 0 12px; max-width: 80ch; }
+  code { font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+
+  .intro { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; margin-top: 20px; }
+  .intro p { margin: 0 0 8px; max-width: 85ch; }
+  .intro p:last-child { margin-bottom: 0; }
+  .intro .caveat { color: var(--yellow); }
+  .takeaways { margin: 12px 0 0; padding-left: 20px; }
+  .takeaways li { margin: 3px 0; }
+
+  .info {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 15px; height: 15px; margin-left: 5px; border-radius: 50%;
+    border: 1px solid var(--muted); color: var(--muted); font: 600 10px/1 Georgia, serif;
+    cursor: help; vertical-align: 1px; user-select: none; flex: none;
+  }
+  .info:hover, .info:focus { color: var(--blue); border-color: var(--blue); outline: none; }
+  #tip {
+    position: fixed; z-index: 100; max-width: 320px; padding: 8px 10px;
+    background: var(--raised); border: 1px solid var(--border); border-radius: 6px;
+    font-size: 12px; line-height: 1.45; color: var(--text); box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    pointer-events: none;
+  }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; border-top: 3px solid var(--gray); display: flex; flex-direction: column; }
+  .card.ising { border-top-color: var(--blue); }
+  .card.xxz { border-top-color: var(--green); }
+  .card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .card-label { font-weight: 600; }
+  .check { color: var(--green); font-size: 13px; cursor: help; }
+  .card-key { color: var(--muted); font-size: 12px; }
+  .card-iou { font-size: 28px; font-weight: 600; margin: 8px 0 2px; }
+  .card-meta { color: var(--muted); font-size: 12px; }
+  .card-desc { color: var(--muted); font-size: 12px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  thead th { background: var(--panel); color: var(--muted); font-weight: 600; font-size: 12px; }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: var(--text); }
+  th .arrow { display: inline-block; width: 1em; color: var(--blue); }
+  td.r, th.r { text-align: right; }
+  tbody tr:hover { background: var(--raised); }
+  tr.hl td:first-child { box-shadow: inset 3px 0 0 var(--yellow); }
+  .mname { font-weight: 500; }
+  .mdesc { color: var(--muted); font-size: 12px; white-space: normal; min-width: 260px; max-width: 380px; margin-top: 2px; }
+
+  .tag { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 10px; border: 1px solid; }
+  .tag.neural { color: var(--blue); border-color: rgba(88,166,255,.4); }
+  .tag.rule { color: var(--purple); border-color: rgba(188,140,255,.4); }
+  .tag.control { color: var(--muted); border-color: var(--border); }
+
+  .bar-cell { width: 26%; min-width: 200px; }
+  .bar { position: relative; height: 12px; margin-top: 4px; background: var(--raised); border-radius: 2px; }
+  .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; opacity: .85; }
+  .bar .ci { position: absolute; top: 50%; height: 2px; margin-top: -1px; background: var(--text); opacity: .7; }
+  .bar .ci::before, .bar .ci::after { content: ""; position: absolute; top: -4px; width: 1px; height: 10px; background: var(--text); }
+  .bar .ci::before { left: 0; } .bar .ci::after { right: 0; }
+  .fill.ising { background: var(--blue); } .fill.xxz { background: var(--green); } .fill.other { background: var(--gray); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+
+  .status { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 10px; border: 1px solid; }
+  .status.ok { color: var(--green); border-color: rgba(63,185,80,.4); }
+  .status.diff { color: var(--red); border-color: rgba(248,81,73,.4); }
+  .status.note { color: var(--yellow); border-color: rgba(210,153,34,.4); }
+  td.wrap { white-space: normal; color: var(--muted); }
+
+  dl.glossary { display: grid; grid-template-columns: max-content 1fr; gap: 8px 20px; margin: 12px 0 0; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; }
+  dl.glossary dt { font-weight: 600; }
+  dl.glossary dd { margin: 0; color: var(--muted); max-width: 80ch; }
+  @media (max-width: 600px) { dl.glossary { grid-template-columns: 1fr; } dl.glossary dd { margin-bottom: 6px; } }
+
+  nav.tabs { display: flex; gap: 4px; margin-top: 18px; border-bottom: 1px solid var(--border); }
+  nav.tabs button {
+    background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted);
+    font: inherit; font-weight: 600; padding: 8px 14px; cursor: pointer; margin-bottom: -1px;
+  }
+  nav.tabs button:hover { color: var(--text); }
+  nav.tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: #f78166; }
+
+  .areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin: 12px 0 20px; }
+  .area { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; cursor: pointer; text-align: left; color: inherit; font: inherit; }
+  .area:hover, .area.on { border-color: var(--blue); }
+  .area b { display: block; } .area span { color: var(--muted); font-size: 12px; }
+  .filebar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .filebar input[type=search], .filebar select {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font: inherit;
+  }
+  .filebar input[type=search] { flex: 1 1 260px; }
+  .filebar label { color: var(--muted); font-size: 13px; display: flex; gap: 6px; align-items: center; }
+  #fcount { color: var(--muted); font-size: 12px; margin-left: auto; }
+  details.fgroup { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; background: var(--panel); }
+  details.fgroup > summary { padding: 8px 12px; cursor: pointer; font: 13px ui-monospace, SFMono-Regular, Consolas, monospace; }
+  details.fgroup > summary .n { color: var(--muted); margin-left: 6px; font-family: inherit; }
+  .frow { padding: 8px 12px 8px 28px; border-top: 1px solid var(--border); background: var(--bg); }
+  .frow .fname { font: 13px ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
+  .frow .fdesc { color: var(--muted); font-size: 12px; margin-top: 2px; max-width: 95ch; }
+  .frow .tags { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 8px; vertical-align: 1px; }
+  .tag.ftype { color: var(--muted); border-color: var(--border); }
+  .tag.frole { color: var(--purple); border-color: rgba(188,140,255,.4); }
+  .tag.fstart { color: var(--yellow); border-color: rgba(210,153,34,.5); }
+  .empty { color: var(--muted); padding: 12px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Correlation-NN segmentation results</h1>
+  <p class="sub">Source: <code id="src"></code> · <span id="count"></span> methods · <span id="fcount-total"></span> repository files</p>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="results" aria-selected="true">Results</button>
+    <button role="tab" data-tab="files" aria-selected="false">Files</button>
+  </nav>
+
+  <div id="tab-results">
+  <section class="intro">
+    <p><strong>What this experiment asks:</strong> each image becomes a spin Hamiltonian (Ising or XXZ), and we measure the
+      spin–spin correlation matrix <em>C</em> of its thermal (Gibbs) state. Can a trained neural network read <em>C</em>
+      and recover the object mask better than the paper's simple seed-sign rule (Algorithm&nbsp;1)?</p>
+    <p><strong>Data:</strong> 100 Weizmann single-object images, shrunk to 16×16 grayscale, scored against human masks.
+      Each method is trained and evaluated with 5-fold cross-validation, so every image is scored exactly once by a model that never saw it.</p>
+    <p class="caveat">All 100 images were used in earlier project development, so this is internal validation, not a fresh external test.
+      Better learned decoding is not evidence of a quantum advantage.</p>
+    <ul class="takeaways" id="takeaways"></ul>
+  </section>
+
+  <h2>Headline results</h2>
+  <p class="lead">The six numbers the handoff document quotes (page 4). Hover any <span class="info" tabindex="0" data-tip="Like this. Tooltips explain each term in place.">i</span> for an explanation.</p>
+  <div class="cards" id="cards"></div>
+
+  <h2>All methods</h2>
+  <p class="lead">Every method in the summary file, sorted by mean IoU. Click a column header to re-sort.
+    Names read <code>input/seed-and-rule</code>: the part before the slash is what the method looks at, the part after is how much seed information it gets and how it decides.</p>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--blue)"></span>Ising correlations</span>
+    <span><span class="sw" style="background:var(--green)"></span>XXZ correlations</span>
+    <span><span class="sw" style="background:var(--gray)"></span>Control (no correlations)</span>
+    <span>Bar = mean IoU on a 0–1 scale; whisker = 95% CI</span>
+    <span><span style="color:var(--yellow)">▍</span> headline method</span>
+  </div>
+  <div class="table-wrap">
+    <table id="results">
+      <thead><tr>
+        <th class="sortable" data-key="method">Method<span class="info" tabindex="0" data-tip="Before the slash: Ising/XXZ = neural network reading that model's correlations; -historical = the older fixed Hamiltonian; -unrestricted = XXZ chosen without the sampler-convergence filter; -column = network sees only the seed's correlation column; prior / image = controls with no correlations. After the slash: none = no seed; foreground = one known object pixel; the remaining suffixes are classical decision rules.">i</span><span class="arrow"></span></th>
+        <th class="sortable" data-key="kind">Type<span class="info" tabindex="0" data-tip="Neural = a trained network decodes the correlations. Classical rule = a fixed formula like Algorithm 1's sign test, with no network. Control = a baseline that gets no correlation data, used to show what correlations add.">i</span><span class="arrow"></span></th>
+        <th class="sortable r" data-key="iou">Mean IoU<span class="info" tabindex="0" data-tip="Intersection over Union: overlap between the predicted and true foreground divided by their combined area. 1 = perfect mask, 0 = no overlap. Averaged over the 100 images, each weighted equally.">i</span><span class="arrow"></span></th>
+        <th class="sortable r" data-key="lo">95% CI<span class="info" tabindex="0" data-tip="Range where the mean IoU would likely fall if you resampled the image set (bootstrap over source images). Overlapping intervals mean two methods aren't clearly different. It does not include variation from retraining the models.">i</span><span class="arrow"></span></th>
+        <th class="sortable r" data-key="bpm">BPM<span class="info" tabindex="0" data-tip="Boundary proximity metric: how well the predicted object outline matches the true one, using Zhang skeletons with a 1-pixel tolerance. 0–1, higher is better. Not the same as contour overlap.">i</span><span class="arrow"></span></th>
+        <th class="bar-cell">IoU bar<span class="info" tabindex="0" data-tip="Visual version of the Mean IoU column. The bar length is the mean; the thin whisker spans the 95% CI.">i</span></th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>Environment log</h2>
+  <p class="lead">The setup values reported for this checkout, each compared against what's on disk or a fresh rerun.
+    The handoff's first deliverable (T01) asks for this log and for any discrepancies to be raised at the research meeting.</p>
+  <div class="legend">
+    <span><span class="status ok">matches</span> checked against the repo</span>
+    <span><span class="status diff">differs</span> checked, does not match</span>
+    <span><span class="status note">not reproduced</span> stated, could not confirm</span>
+  </div>
+  <div class="table-wrap">
+    <table id="env">
+      <thead><tr><th>Item</th><th>Recorded value</th><th>Status</th><th>How it was checked</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>Glossary</h2>
+  <dl class="glossary">
+    <dt>Ising model</dt><dd>Spins interact only through their Z components. Its Gibbs state is a classical probability distribution, so it can be simulated classically.</dd>
+    <dt>XXZ model</dt><dd>Adds XX and YY "exchange" terms of strength g, which don't commute with ZZ. This is the genuinely quantum version.</dd>
+    <dt>Coupling Δ</dt><dd>Edge strength between neighbouring pixels, Δ = arctan[α(τ − d)], where d is their intensity difference. Similar pixels get Δ &gt; 0 and prefer aligned spins.</dd>
+    <dt>Gibbs state</dt><dd>The thermal state exp(−bH)/Z. Larger b means colder and more ordered.</dd>
+    <dt>Correlation matrix C</dt><dd>C[i,j] = ⟨Z<sub>i</sub>Z<sub>j</sub>⟩ for every pixel pair, estimated from 8,192 Z-basis snapshots per image. Positive means the two pixels tend to agree. C = 4Γ in the paper's notation.</dd>
+    <dt>Seed</dt><dd>A pixel whose label is known in advance. Here it's an interior foreground pixel taken from the human mask. Seeds label the readout; they don't pin spins.</dd>
+    <dt>Algorithm 1 (sign rule)</dt><dd>The paper's rule: a pixel is foreground if its correlation with the foreground seed is positive.</dd>
+    <dt>Neural decoder</dt><dd>A small CNN or graph network that takes the whole C matrix plus pixel coordinates and outputs a mask. It never sees image intensities.</dd>
+    <dt>Cross-validation</dt><dd>5 outer folds of 64 training, 16 validation and 20 test images. Settings are tuned on validation images, then each test image is scored once.</dd>
+  </dl>
+  </div>
+
+  <div id="tab-files" hidden>
+    <h2>How the repository is laid out</h2>
+    <p class="lead">Every file in the repo (committed, plus new files not yet committed), grouped by area. Click an area to filter.
+      Descriptions are pulled from the files themselves (Python docstrings, MATLAB help comments, report headings, JSON keys),
+      so they're only as good as each file's own documentation.
+      <span class="tag fstart">★ start here</span> marks the files the handoff's code map (page 8) says to read first, labelled by topic.</p>
+    <div class="areas" id="areas"></div>
+    <div class="filebar">
+      <input id="fq" type="search" placeholder="Search file names and descriptions…" aria-label="Search files">
+      <select id="ftype" aria-label="File type"></select>
+      <label><input type="checkbox" id="fstart"> Start-here only</label>
+      <span id="fcount"></span>
+    </div>
+    <div id="flist"></div>
+  </div>
+</main>
+<div id="tip" hidden></div>
+
+<script>
+const DATA = __DATA__;
+
+const family = m => m.startsWith("Ising") ? "ising" : m.startsWith("XXZ") ? "xxz" : "other";
+const f3 = x => x.toFixed(3);
+const byName = Object.fromEntries(DATA.rows.map(r => [r.method, r]));
+const headlineKeys = new Set(DATA.headline.map(h => h[0]));
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const info = text => { const s = el("span", "info", "i"); s.tabIndex = 0; s.dataset.tip = text; return s; };
+
+const RULES = {
+  "one-sign": "Classical Algorithm 1: foreground if C(seed, i) > 0. No neural network.",
+  "one-threshold": "Like the sign rule, but the cutoff on C(seed, i) is tuned between −0.8 and 0.8 instead of fixed at 0.",
+  "two-max": "Two-seed rule: foreground if C(F, i) − C(B, i) > 0. Gets an extra known background pixel, so more supervision.",
+  "same-H-sign": "Algorithm 1 sign rule at the same Hamiltonian the neural model chose, so both decoders see identical inputs.",
+};
+function describe(name) {
+  const [input, variant] = name.split("/");
+  const model = input.split("-")[0];
+  if (input === "prior") return ["control", "Control: sees only pixel positions" + (variant === "foreground" ? " and the seed" : "") + ". No image, no correlations. Shows how far average object shape alone gets you."];
+  if (input === "image") return ["control", "Control: small CNN trained on the raw grayscale pixels instead of correlations" + (variant === "foreground" ? ", plus the seed." : ".")];
+  const base = variant.replace(/-80$/, "");
+  if (RULES[base]) {
+    const extra = variant.endsWith("-80") ? " Tuned on all 80 training images instead of 16 validation images." : "";
+    return ["rule", `${RULES[base]} Uses ${model} correlations.${extra}`];
+  }
+  const seed = variant === "foreground" ? "Given one known foreground pixel." : "No seed given.";
+  if (input.endsWith("-historical")) return ["neural", `Neural decoder on ${model} correlations at the older fixed Hamiltonian from earlier studies (not retuned). Separates decoder gains from Hamiltonian tuning. ${seed}`];
+  if (input.endsWith("-unrestricted")) return ["neural", `Neural decoder on XXZ correlations, with the Hamiltonian chosen without the ≥95% sampler-convergence filter. ${seed}`];
+  if (input.endsWith("-column")) return ["neural", `Neural decoder that sees only the seed's column of the ${model} correlation matrix, not all pairs. Tests whether the extra pairs help. ${seed}`];
+  return ["neural", `Neural decoder reading the full ${model} correlation matrix (all pixel pairs). ${seed}`];
+}
+const KIND_LABEL = { neural: "Neural", rule: "Classical rule", control: "Control" };
+for (const r of DATA.rows) [r.kind, r.desc] = describe(r.method);
+
+document.getElementById("src").textContent = DATA.source;
+document.getElementById("count").textContent = DATA.rows.length;
+
+// takeaways, computed from the data so they track the JSON
+const g = k => byName[k];
+const overlap = (a, b) => a.lo <= b.hi && b.lo <= a.hi;
+const rules = DATA.rows.filter(r => r.kind === "rule");
+const ruleMin = Math.min(...rules.map(r => r.iou)), ruleMax = Math.max(...rules.map(r => r.iou));
+const tk = [
+  `With one foreground seed, the neural decoders reach IoU ${f3(g("Ising/foreground").iou)} (Ising) and ${f3(g("XXZ/foreground").iou)} (XXZ). Their 95% intervals ${overlap(g("Ising/foreground"), g("XXZ/foreground")) ? "overlap, so Ising and XXZ are not distinguishable here" : "do not overlap"}.`,
+  `Both beat the controls that get no correlations: raw image ${f3(g("image/foreground").iou)}, position + seed ${f3(g("prior/foreground").iou)}.`,
+  `The classical correlation rules (including Algorithm 1) score ${f3(ruleMin)}–${f3(ruleMax)}, well below the neural decoders on the same correlations.`,
+  `A network seeing only the seed's column scores ${f3(g("Ising-column/foreground").iou)} (Ising) vs ${f3(g("Ising/foreground").iou)} with all pairs, so the extra pairs carry usable signal.`,
+];
+const tkList = document.getElementById("takeaways");
+tk.forEach(t => tkList.append(el("li", "", t)));
+
+const cards = document.getElementById("cards");
+for (const [key, label, desc] of DATA.headline) {
+  const r = byName[key];
+  const c = el("div", "card " + family(key));
+  const head = el("div", "card-head");
+  const lab = el("span", "card-label", label);
+  lab.append(info(describe(key)[1]));
+  head.append(lab);
+  const chk = el("span", "check", "✓");
+  chk.title = "Value read directly from " + DATA.source;
+  head.append(chk);
+  c.append(head, el("div", "card-key", key));
+  const iou = el("div", "card-iou num", f3(r.iou));
+  c.append(iou);
+  const meta = el("div", "card-meta num", `IoU · CI [${f3(r.lo)}, ${f3(r.hi)}] · BPM ${f3(r.bpm)}`);
+  c.append(meta);
+  c.append(el("div", "card-desc", desc));
+  cards.append(c);
+}
+
+const tbody = document.querySelector("#results tbody");
+let sortKey = "iou", sortDir = -1;
+function render() {
+  const rows = [...DATA.rows].sort((a, b) => {
+    const x = a[sortKey], y = b[sortKey];
+    return (typeof x === "string" ? x.localeCompare(y) : x - y) * sortDir;
+  });
+  tbody.replaceChildren();
+  for (const r of rows) {
+    const tr = el("tr", headlineKeys.has(r.method) ? "hl" : "");
+    const name = el("td");
+    name.append(el("div", "mname", r.method), el("div", "mdesc", r.desc));
+    tr.append(name);
+    const kind = el("td"); kind.append(el("span", "tag " + r.kind, KIND_LABEL[r.kind])); tr.append(kind);
+    tr.append(el("td", "r num", f3(r.iou)));
+    tr.append(el("td", "r num", `[${f3(r.lo)}, ${f3(r.hi)}]`));
+    tr.append(el("td", "r num", f3(r.bpm)));
+    const td = el("td", "bar-cell"), bar = el("div", "bar");
+    const fill = el("div", "fill " + family(r.method)); fill.style.width = (r.iou * 100) + "%";
+    const ci = el("div", "ci"); ci.style.left = (r.lo * 100) + "%"; ci.style.width = ((r.hi - r.lo) * 100) + "%";
+    bar.title = `${r.method}: ${f3(r.iou)} [${f3(r.lo)}, ${f3(r.hi)}]`;
+    bar.append(fill, ci); td.append(bar); tr.append(td);
+    tbody.append(tr);
+  }
+  document.querySelectorAll("#results th.sortable").forEach(th => {
+    th.querySelector(".arrow").textContent = th.dataset.key === sortKey ? (sortDir > 0 ? "▲" : "▼") : "";
+  });
+}
+document.querySelectorAll("#results th.sortable").forEach(th => th.addEventListener("click", e => {
+  if (e.target.classList.contains("info")) return;
+  const k = th.dataset.key;
+  if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = (k === "method" || k === "kind") ? 1 : -1; }
+  render();
+}));
+render();
+
+const labels = { ok: "matches", diff: "differs", note: "not reproduced" };
+const envBody = document.querySelector("#env tbody");
+for (const [item, value, status, check, meaning] of DATA.env) {
+  const tr = el("tr");
+  const name = el("td", "", item);
+  if (meaning) name.append(info(meaning));
+  tr.append(name, el("td", "num", value));
+  const td = el("td"); td.append(el("span", "status " + status, labels[status])); tr.append(td);
+  tr.append(el("td", "wrap", check));
+  envBody.append(tr);
+}
+
+// ---- Files tab ----
+const AREA_DESC = {
+  "Study reports and records": "One Markdown report per study, plus its JSON protocol, selection and summary records. Read the report first.",
+  "Python research code": "All current experiments: Hamiltonians, samplers, runners, analysis and plotting.",
+  "MATLAB / QCLAB code": "MATLAB versions of the circuits and cross-language checks against Python.",
+  "Automated tests": "pytest checks; run with: python -m pytest -c algorithm1/pytest.ini -q",
+  "Generated figures": "Plots committed from results/. The large raw data stays local and is not in Git.",
+  "Dashboard (this page)": "This page, its build scripts and the double-click launcher.",
+  "Student notes": "Organized record of the work so far: session summary, environment log, headline numbers, AI-use log.",
+  "Project website (Jekyll)": "The older public project blog (index.md, posts, layouts).",
+  "Earlier projects (quantum walks, MATLAB)": "Quantum-random-walk segmentation work from before Algorithm 1. Not used for the current results.",
+};
+const FILES = DATA.files;
+document.getElementById("fcount-total").textContent = FILES.length;
+let areaFilter = "";
+const areaCounts = {};
+for (const f of FILES) areaCounts[f.area] = (areaCounts[f.area] || 0) + 1;
+const areasEl = document.getElementById("areas");
+for (const a of Object.keys(AREA_DESC).filter(a => areaCounts[a])) {
+  const b = el("button", "area");
+  b.type = "button";
+  b.append(el("b", "", `${a} · ${areaCounts[a]}`), el("span", "", AREA_DESC[a]));
+  b.addEventListener("click", () => {
+    areaFilter = areaFilter === a ? "" : a;
+    areasEl.querySelectorAll(".area").forEach(x => x.classList.toggle("on", x === b && areaFilter === a));
+    renderFiles();
+  });
+  areasEl.append(b);
+}
+const ftype = document.getElementById("ftype");
+ftype.append(new Option("All types", ""));
+for (const t of [...new Set(FILES.map(f => f.type))].sort()) ftype.append(new Option(t, t));
+const fq = document.getElementById("fq"), fstart = document.getElementById("fstart");
+[fq, ftype, fstart].forEach(x => x.addEventListener("input", renderFiles));
+
+function renderFiles() {
+  const q = fq.value.trim().toLowerCase();
+  const shown = FILES.filter(f =>
+    (!areaFilter || f.area === areaFilter) && (!ftype.value || f.type === ftype.value) &&
+    (!fstart.checked || f.start) &&
+    (!q || (f.path + " " + f.desc + " " + f.role + " " + f.start).toLowerCase().includes(q)));
+  document.getElementById("fcount").textContent = `${shown.length} of ${FILES.length} files`;
+  const groups = new Map();
+  for (const f of shown) { if (!groups.has(f.dir)) groups.set(f.dir, []); groups.get(f.dir).push(f); }
+  const filtering = q || areaFilter || ftype.value || fstart.checked;
+  const list = document.getElementById("flist");
+  list.replaceChildren();
+  if (!shown.length) { list.append(el("div", "empty", "No files match.")); return; }
+  for (const [dir, files] of groups) {
+    const d = el("details", "fgroup");
+    d.open = Boolean(filtering) || files.some(f => f.start);
+    const s = el("summary", "", dir + "/");
+    s.append(el("span", "n", `${files.length} file${files.length > 1 ? "s" : ""}`));
+    d.append(s);
+    for (const f of files) {
+      const row = el("div", "frow");
+      const name = el("div", "fname", f.name);
+      const tags = el("span", "tags");
+      tags.append(el("span", "tag ftype", f.type));
+      if (f.role) tags.append(el("span", "tag frole", f.role));
+      if (f.start) tags.append(el("span", "tag fstart", "★ " + f.start));
+      name.append(tags);
+      row.append(name, el("div", "fdesc", f.desc));
+      d.append(row);
+    }
+    list.append(d);
+  }
+}
+renderFiles();
+
+// ---- tabs ----
+const tabs = document.querySelectorAll("nav.tabs button");
+function showTab(name) {
+  tabs.forEach(t => t.setAttribute("aria-selected", String(t.dataset.tab === name)));
+  document.getElementById("tab-results").hidden = name !== "results";
+  document.getElementById("tab-files").hidden = name !== "files";
+  document.getElementById("tip").hidden = true;
+}
+tabs.forEach(t => t.addEventListener("click", () => { showTab(t.dataset.tab); history.replaceState(null, "", "#" + t.dataset.tab); }));
+showTab(location.hash === "#files" ? "files" : "results");
+
+// one floating tooltip, positioned on hover/focus so it isn't clipped by scrolling tables
+const tip = document.getElementById("tip");
+function showTip(target) {
+  tip.textContent = target.dataset.tip;
+  tip.hidden = false;
+  const r = target.getBoundingClientRect(), t = tip.getBoundingClientRect();
+  let left = Math.min(Math.max(8, r.left + r.width / 2 - t.width / 2), window.innerWidth - t.width - 8);
+  let top = r.bottom + 8;
+  if (top + t.height > window.innerHeight - 8) top = r.top - t.height - 8;
+  tip.style.left = left + "px"; tip.style.top = top + "px";
+}
+const hideTip = () => { tip.hidden = true; };
+for (const ev of ["mouseover", "focusin"]) document.addEventListener(ev, e => { const t = e.target.closest?.("[data-tip]"); if (t) showTip(t); });
+for (const ev of ["mouseout", "focusout"]) document.addEventListener(ev, e => { if (e.target.closest?.("[data-tip]")) hideTip(); });
+window.addEventListener("scroll", hideTip, { passive: true });
+</script>
+</body>
+</html>
