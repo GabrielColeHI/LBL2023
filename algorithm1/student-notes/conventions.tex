@@ -1,0 +1,98 @@
+\documentclass[10pt]{article}
+\usepackage[margin=0.6in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\setlist{nosep,leftmargin=1.2em}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}
+\newcommand{\code}[1]{\texttt{\small #1}}
+\pagestyle{empty}
+
+\begin{document}
+
+{\large\bfseries Hamiltonian and measurement conventions}\hfill {\small Research baseline \code{f93ea2f} \;|\; 27 Oct 2026}
+
+\vspace{-2pt}\rule{\linewidth}{0.4pt}
+
+\textbf{Lattice and input.}
+$N$ pixels on an open rectangular grid, one undirected edge $\langle i,j\rangle$ per horizontal/vertical neighbour pair.
+Pixel intensities are grayscale in $[0,255]$; $d_{ij}=|I_i-I_j|$ (Euclidean norm of channel differences for RGB).
+The image only sets couplings: a spin-$\tfrac12$ site does not store a colour.
+\hfill\code{ising\_monte\_carlo.py:30--42}
+
+\textbf{Hamiltonian.}
+\[
+H_g=-\frac14\sum_{\langle i,j\rangle}\Big[g\,(X_iX_j+Y_iY_j)+\Delta_{ij}\,Z_iZ_j\Big],
+\qquad
+\Delta_{ij}=\arctan\!\big[\alpha(\tau-d_{ij})\big],\quad \alpha>0 .
+\]
+\emph{Ising}: $g=0$, diagonal in the $Z$ basis, so its Gibbs state is a classical Ising distribution.
+\emph{XXZ}: $g>0$, noncommuting exchange.
+\textbf{Sign:} similar pixels ($d<\tau$) give $\Delta>0$, which favours parallel $Z$ spins because of the leading minus sign.
+The originally proposed $\arctan[\alpha(d-\tau)]$ has the opposite sign and is \emph{not} used.
+\hfill\code{ising\_monte\_carlo.py:42}, \code{ising-algorithm1.md}
+
+\textbf{Parameter rules.}
+Threshold $\tau$: edge-Otsu on neighbour differences (fallback 100) or a quantile (q75, q90), floored at 1.
+Sensitivity $\alpha$: fixed $0.01$ or $1/\max(q_{90}-q_{10},1)$ of the edge differences.
+Exchange $g=r\,D$ (relative) with $r=g/D\in\{0,0.1,0.5\}$ in the neural study.
+\hfill\code{xxz\_image\_gibbs.py:22--42}
+
+\textbf{Temperature.}
+\[
+\rho_b=\frac{e^{-bH}}{\operatorname{Tr}e^{-bH}},\qquad
+b=\frac{\beta_{\text{paper}}}{N}=\frac{4K}{D},\qquad D=\operatorname{median}_{\langle i,j\rangle}|\Delta_{ij}| .
+\]
+If $D<10^{-8}$, use $D=\max(\operatorname{mean}|\Delta_{ij}|,\,10^{-3})$. ``Combined'' temperature uses $b=4K/(D+g)$ instead.
+$K$ is a dimensionless inverse temperature (larger $K$ = colder); it is \emph{not} the $K=3$ particle cap of the old Algorithm~3.
+Compare physical $b$, not $\beta$ labels, across studies.
+\hfill\code{xxz\_image\_gibbs.py:37--47}
+
+\textbf{Measurement.}
+\[
+C_{ij}=\langle Z_iZ_j\rangle_{\rho_b}=4\,\Gamma_{ij},\qquad \Gamma_{ij}=\langle S^z_iS^z_j\rangle,\quad S^z=Z/2,\qquad C_{ii}=1 .
+\]
+One $Z$-basis snapshot $z\in\{\pm1\}^N$ gives every pair product $z_iz_j$; estimates average over snapshots.
+The zero-field models have global spin-flip symmetry, so $\langle Z_i\rangle=0$: segmentation must use pairs, not single spins.
+\hfill\code{correlation\_nn\_data.py:51--52, 116}
+
+\textbf{Readout.} Seeds label the readout; they never pin spins or change $H$.
+
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Supervision & Pixel $i$ is foreground if & Code \\
+\midrule
+Foreground seed $F$ & $C_{Fi}>0$ & \code{weizmann\_petz\_metrics.py:9--10} \\
+Background seed $B$ & $C_{Bi}<0$ & same \\
+Two seeds $F,B$ & $C_{Fi}-C_{Bi}>0$ & \code{xxz\_two\_seed.py:40--43, 62} \\
+Neural decoder & $p_i>t$, $t$ chosen on validation images & \code{correlation\_nn.py} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\textbf{Ties differ by runner:} \code{algorithm1.py:251} uses strict $\Gamma>0$; the Weizmann and two-seed studies treat $|\cdot|\le10^{-12}$ as zero (so a tie is not foreground).
+The neural input is the full $C$ matrix plus lattice coordinates (and optionally $F$); no intensities, parameters or $XX/YY$ correlations.
+
+\textbf{Indexing.}
+Python pixels are zero-based, row-major; MATLAB function inputs are one-based, row-major.
+In dense matrices pixel 0 is the most significant tensor factor. Qiskit system qubit $=N-1-p$; QCLAB qubit $=p$.
+$Z\lvert0\rangle=+\lvert0\rangle$. Use the existing exchange helpers rather than reversing matrices by hand.
+\hfill\code{algorithm1.py:157}, \code{README.md}
+
+\textbf{Check that fixes the sign convention.}
+For one Ising edge, exact diagonalisation gives $C_{12}=\tanh(b\Delta/4)$, i.e.\ $\Gamma_{12}=\tfrac14\tanh(b\Delta/4)$:
+positive $\Delta$ $\Rightarrow$ positive correlation $\Rightarrow$ same segment.
+For XXZ the zero shifts: $\Gamma_{12}=\tfrac14\tanh\!\big[\tfrac{b\Delta}{4}-\tfrac12\log\cosh\tfrac{bg}{2}\big]$.
+\hfill\code{ising-algorithm1.md}, \code{weizmann-xxz.md}
+
+\textbf{Differences from the original manuscript.}
+\begin{itemize}
+\item Coupling was linear, $\Delta=2-\kappa\,d/\sigma$ with $\sigma$ the std.\ of neighbour distances; now $\arctan[\alpha(\tau-d)]$.
+\item The paper sums over ordered pairs with a factor $\tfrac12$ and $S=\sigma/2$; this equals the $-\tfrac14\sum_{\langle i,j\rangle}$ above (each edge once).
+\item The paper's $\Gamma=\langle S^zS^z\rangle$ ranges over $[-\tfrac14,\tfrac14]$; current code and the neural study use $C=4\Gamma\in[-1,1]$.
+\item Errata to fix in the revision: $S^z\lvert\downarrow\rangle$ should equal $-\tfrac12\lvert\downarrow\rangle$ (not $\lvert\uparrow\rangle$); a density matrix is positive semidefinite, not entrywise nonnegative.
+\end{itemize}
+
+\end{document}
