@@ -128,6 +128,27 @@
   .tag.frole { color: var(--purple); border-color: rgba(188,140,255,.4); }
   .tag.fstart { color: var(--yellow); border-color: rgba(210,153,34,.5); }
   .empty { color: var(--muted); padding: 12px 0; }
+
+  .status.report { color: var(--purple); border-color: rgba(188,140,255,.4); }
+  .status.done { color: var(--green); border-color: rgba(63,185,80,.4); }
+  .status.open { color: var(--yellow); border-color: rgba(210,153,34,.4); }
+  .status.you { color: var(--blue); border-color: rgba(88,166,255,.4); }
+  ul.disc { margin: 12px 0 0; padding: 12px 18px 12px 34px; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; }
+  ul.disc li { margin: 4px 0; max-width: 95ch; }
+  .vals { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .val { font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; cursor: help; }
+  .val.bad { color: var(--red); }
+  .val .st { color: var(--muted); }
+  .family { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; margin-top: 12px; }
+  .family h3 { font-size: 14px; margin: 0 0 2px; }
+  .family .how { color: var(--muted); font-size: 12px; }
+  .family .fnote { color: var(--yellow); font-size: 12px; margin-top: 6px; max-width: 95ch; }
+  .figs { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 10px; }
+  .fig { margin: 0; }
+  .fig img { width: 100%; border-radius: 4px; background: #fff; display: block; }
+  .fig figcaption { font-size: 12px; margin-top: 4px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .scaling-img { width: 100%; border-radius: 6px; background: #fff; margin-top: 12px; display: block; }
+  td.bad { color: var(--red); }
 </style>
 </head>
 <body>
@@ -137,6 +158,7 @@
 
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="results" aria-selected="true">Results</button>
+    <button role="tab" data-tab="progress" aria-selected="false">Progress</button>
     <button role="tab" data-tab="files" aria-selected="false">Files</button>
   </nav>
 
@@ -207,6 +229,58 @@
     <dt>Neural decoder</dt><dd>A small CNN or graph network that takes the whole C matrix plus pixel coordinates and outputs a mask. It never sees image intensities.</dd>
     <dt>Cross-validation</dt><dd>5 outer folds of 64 training, 16 validation and 20 test images. Settings are tuned on validation images, then each test image is scored once.</dd>
   </dl>
+  </div>
+
+  <div id="tab-progress" hidden>
+    <section class="intro">
+      <p><strong>What this tab tracks:</strong> the handoff's first task, T01 (reproduce and inventory), plus the image-size scaling check.
+        T01 shows the code runs here, every number quoted in the handoff traces back to a saved result, and anything that doesn't match is written down for the PI.</p>
+      <p>Number checks and figure comparisons are <em>recomputed each time the page is built</em>, so a red mark means a result file changed since the check.</p>
+    </section>
+
+    <h2>T01 checklist</h2>
+    <p class="lead">The six T01 items from the handoff. <span class="status you">you</span> items need a person: an email, a MATLAB licence, or rewording in your own words.</p>
+    <div class="table-wrap"><table id="t01">
+      <thead><tr><th>Item</th><th>Status</th><th>Detail</th></tr></thead><tbody></tbody>
+    </table></div>
+
+    <h2>Discrepancies to raise with the PI</h2>
+    <p class="lead">Places where a rerun or file disagrees with the handoff or a report. None changes a headline conclusion, but the handoff asks for each to be recorded.</p>
+    <ul class="disc" id="disc"></ul>
+
+    <h2>Headline-number ledger</h2>
+    <p class="lead">Every number the handoff quotes, matched to the JSON key that stores it. Each value is checked at the precision the handoff shows.
+      Hover a value to see the exact key and stored number.</p>
+    <div class="legend" id="ledger-legend"></div>
+    <div class="table-wrap"><table id="ledger">
+      <thead><tr><th>#</th><th>Page</th><th>Quantity</th><th>Status</th><th>Values (handoff → stored)</th></tr></thead><tbody></tbody>
+    </table></div>
+
+    <h2>Reproduced figures</h2>
+    <p class="lead">One study family at a time, rerun from scratch on this machine into <code>results/student-smoke/</code>,
+      then compared pixel by pixel with the committed figure. <em>Identical</em> means the whole pipeline (Hamiltonian → solver → plot) reproduces exactly.</p>
+    <div id="families"></div>
+    <h3 style="font-size:14px;margin:20px 0 6px">Not rerun</h3>
+    <div class="table-wrap"><table id="notrerun">
+      <thead><tr><th>Study family</th><th>Why not</th></tr></thead><tbody></tbody>
+    </table></div>
+
+    <div id="scaling-section">
+      <h2>Image-size scaling check</h2>
+      <p class="lead">Ising Gibbs sampler plus the Algorithm 1 seed-sign rule on a synthetic noisy disk at increasing size
+        (<code>python/benchmark_sizes.py</code>). <strong>This is a scaling check, not segmentation evidence:</strong> the disk is easy by design.</p>
+      <div class="table-wrap"><table id="scaling">
+        <thead><tr>
+          <th class="r">Image</th><th class="r">Pixels N</th>
+          <th class="r">Sampler time (s)<span class="info" tabindex="0" data-tip="Wall-clock time at a fixed sample budget, not time to convergence. Grows about linearly with N (log-log slope 0.99).">i</span></th>
+          <th class="r">IoU<span class="info" tabindex="0" data-tip="Overlap with the true disk. High because the test image is easy; not evidence of segmentation quality.">i</span></th>
+          <th class="r">Max R-hat<span class="info" tabindex="0" data-tip="Convergence diagnostic comparing independent chains, worst pixel. Below 1.05 means the chains agree. Red = not converged, so this run needs longer chains.">i</span></th>
+          <th class="r">b<span class="info" tabindex="0" data-tip="Inverse temperature per site, b = 4K/D. Around 45 is very cold: correlations sit near ±0.25, essentially the ground state.">i</span></th>
+        </tr></thead><tbody></tbody>
+      </table></div>
+      <p class="lead" id="scaling-settings" style="margin-top:8px"></p>
+      <img class="scaling-img" id="scaling-img" alt="Runtime, IoU, seed correlations and correlation maps for 8×8 to 64×64 images">
+    </div>
   </div>
 
   <div id="tab-files" hidden>
@@ -417,16 +491,105 @@ function renderFiles() {
 }
 renderFiles();
 
+// ---- Progress tab ----
+const P = DATA.progress;
+const T01_LABEL = { done: "done", open: "open", you: "you" };
+const t01Body = document.querySelector("#t01 tbody");
+for (const [item, status, detail] of P.t01) {
+  const tr = el("tr");
+  const td = el("td"); td.append(el("span", "status " + status, T01_LABEL[status]));
+  tr.append(el("td", "", item), td, el("td", "wrap", detail));
+  t01Body.append(tr);
+}
+const disc = document.getElementById("disc");
+P.discrepancies.forEach(d => disc.append(el("li", "", d)));
+
+const nOk = P.ledger.filter(r => r.status === "ok").length;
+const nDiff = P.ledger.filter(r => r.status === "diff").length;
+const nRep = P.ledger.filter(r => r.status === "report").length;
+const lg = document.getElementById("ledger-legend");
+for (const [cls, label, text] of [
+  ["ok", "matches", `${nOk} rows: every value equals the JSON at the shown precision`],
+  ["diff", "differs", `${nDiff} rows`],
+  ["report", "report only", `${nRep} row: found in a report; raw data not in Git`]]) {
+  const s = el("span"); s.append(el("span", "status " + cls, label), " " + text); lg.append(s);
+}
+const ledgerBody = document.querySelector("#ledger tbody");
+const LEDGER_LABEL = { ok: "matches", diff: "differs", report: "report only" };
+const fmtStored = v => v == null ? "missing" : Number.isInteger(v) ? String(v) : String(+v.toPrecision(6));
+for (const r of P.ledger) {
+  const tr = el("tr");
+  tr.append(el("td", "num", r.num), el("td", "num", r.page), el("td", "wrap", r.label));
+  const td = el("td"); td.append(el("span", "status " + r.status, LEDGER_LABEL[r.status])); tr.append(td);
+  const vals = el("td");
+  if (r.checks.length) {
+    const box = el("div", "vals");
+    for (const c of r.checks) {
+      const v = el("span", "val" + (c.ok ? "" : " bad"), c.shown + " ");
+      v.append(el("span", "st", "→ " + fmtStored(c.stored)));
+      v.dataset.tip = `${c.file} → ${c.path} = ${c.stored}`;
+      v.tabIndex = 0;
+      box.append(v);
+    }
+    vals.append(box);
+  } else {
+    vals.className = "wrap"; vals.textContent = r.note;
+  }
+  tr.append(vals);
+  ledgerBody.append(tr);
+}
+
+const fam = document.getElementById("families");
+for (const f of P.figures) {
+  const box = el("div", "family");
+  box.append(el("h3", "", f.family), el("div", "how", `Rerun: ${f.how} · ${f.time}`));
+  if (f.note) box.append(el("div", "fnote", f.note));
+  const grid = el("div", "figs");
+  for (const g of f.figs) {
+    const fig = el("figure", "fig");
+    if (g.img) { const img = el("img"); img.src = g.img; img.alt = g.name; img.loading = "lazy"; fig.append(img); }
+    const cap = el("figcaption");
+    const st = g.result === "identical" ? "ok" : g.result === "missing" ? "diff" : "note";
+    cap.append(el("code", "", g.name), el("span", "status " + st, g.result));
+    cap.title = g.path;
+    fig.append(cap);
+    grid.append(fig);
+  }
+  box.append(grid);
+  fam.append(box);
+}
+const nrBody = document.querySelector("#notrerun tbody");
+for (const [name, why] of P.not_rerun) { const tr = el("tr"); tr.append(el("td", "", name), el("td", "wrap", why)); nrBody.append(tr); }
+
+if (P.scaling) {
+  const sBody = document.querySelector("#scaling tbody");
+  for (const r of P.scaling.rows) {
+    const tr = el("tr");
+    tr.append(el("td", "r num", `${r.side}×${r.side}`), el("td", "r num", r.n.toLocaleString()),
+      el("td", "r num", r.seconds.toFixed(1)), el("td", "r num", f3(r.iou)),
+      el("td", "r num" + (r.rhat_max > 1.05 ? " bad" : ""), r.rhat_max.toFixed(2)), el("td", "r num", r.b.toFixed(1)));
+    sBody.append(tr);
+  }
+  const s = P.scaling.settings;
+  document.getElementById("scaling-settings").textContent =
+    `Settings: τ = ${P.scaling.tau}, α = ${P.scaling.alpha}, K = ${P.scaling.K}; ${s.chains} chains, ${s.burn} burn-in, ${s.samples} samples; noise SD ${s.noise}. ` +
+    `Next: lengthen chains until R-hat < 1.05, use harder noise and real Weizmann images, and repeat with several RNG seeds.`;
+  const img = document.getElementById("scaling-img");
+  if (P.scaling.img) img.src = P.scaling.img; else img.hidden = true;
+} else {
+  document.getElementById("scaling-section").hidden = true;
+}
+
 // ---- tabs ----
 const tabs = document.querySelectorAll("nav.tabs button");
+const TAB_NAMES = ["results", "progress", "files"];
 function showTab(name) {
   tabs.forEach(t => t.setAttribute("aria-selected", String(t.dataset.tab === name)));
-  document.getElementById("tab-results").hidden = name !== "results";
-  document.getElementById("tab-files").hidden = name !== "files";
+  for (const n of TAB_NAMES) document.getElementById("tab-" + n).hidden = n !== name;
   document.getElementById("tip").hidden = true;
 }
 tabs.forEach(t => t.addEventListener("click", () => { showTab(t.dataset.tab); history.replaceState(null, "", "#" + t.dataset.tab); }));
-showTab(location.hash === "#files" ? "files" : "results");
+showTab(TAB_NAMES.includes(location.hash.slice(1)) ? location.hash.slice(1) : "results");
 
 // one floating tooltip, positioned on hover/focus so it isn't clipped by scrolling tables
 const tip = document.getElementById("tip");

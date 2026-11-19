@@ -42,10 +42,36 @@ Abbreviation: `NN` = `algorithm1/correlation-nn-summary.json`.
 | 20 | Correlation-profile ∞-error ≈ 0.125 | same entry: `gamma_linf` | 0.125377 |
 | 21 | 3.04 million CNOTs (128 spins × 2,000 sweeps) | 1520 CX per sweep (`ising-petz-summary.json`, `operations.cx`) × 2,000 | 3,040,000 |
 
+## Earlier one- vs two-seed table (handoff page 4)
+
+Traced 10 November 2026. Source: `algorithm1/xxz-two-seed-summary.json`, under
+`groups["<model>/q90__two_max/16"].decisions.<rule>.<metric>.mean` (the group name is a
+single key containing slashes), with `<model>` =
+`Ising` or `XXZ` and `<rule>` = `one_background` (one seed) or `two_max` (two seeds).
+The same table appears in `xxz-two-seed-bpm.md` lines 116–119.
+
+| # | Row (16×16) | IoU (`iou`) | Unresolved (`unresolved`) | BPM r=1 (`bpm_iou_r1`) |
+|---|---|---|---|---|
+| 22 | Ising, one seed | 0.4025 → 0.402491 | 2.17% → 0.021732 | 0.3616 → 0.361594 |
+| 23 | Ising, two seeds | 0.4988 → 0.498846 | 7.02% → 0.070184 | 0.4063 → 0.406334 |
+| 24 | XXZ primary, one seed | 0.4013 → 0.401299 | 4.98% → 0.049816 | 0.3635 → 0.363492 |
+| 25 | XXZ primary, two seeds | 0.4973 → 0.497251 | 10.80% → 0.108031 | 0.4061 → 0.406128 |
+
+All match. Note: the "one seed" baseline in this table is the **background**-seed rule
+(`one_background`, C(B,i) < 0), not the foreground-seed rule. Worth stating explicitly in
+the manuscript.
+
+## Local Petz star bath (handoff page 6)
+
+| # | Handoff value | Source | Stored value |
+|---|---|---|---|
+| 26 | XXZ star-bath far-corner Γ on 2×16, sweep 50: −0.010120 [−0.051376, 0.031136] | `local-petz.md` line 216 (128 trajectories, b = 6, bond dimension 32, all-+x start) | −0.010120 [−0.051376, 0.031136] — matches the report |
+
+Caveat: the raw trajectory data behind this row is under `results/local-petz/`, which
+is git-ignored, so it is not in the repository. Only the report table is. Confirming it
+from raw data needs the results archive from the PI. This record uses the older linear
+coupling law.
+
 ## Still to trace
 
-- Handoff page 4, earlier two-seed table: one-seed rows (Ising 0.4025, XXZ 0.4013),
-  unresolved percentages and BPM. These are probably in
-  `xxz-two-seed-reanalysis-summary.json`.
-- Handoff page 6, XXZ star-bath far-corner Γ −0.010120 [−0.051376, 0.031136].
-  This is a local-Petz record and uses the older linear coupling law.
+Nothing from the handoff. Row 26 is traced to the report only (see caveat).

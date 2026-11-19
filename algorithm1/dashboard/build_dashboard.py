@@ -1,13 +1,15 @@
 """Build the self-contained results dashboard (dashboard.html in this folder).
 
 Results come from algorithm1/correlation-nn-summary.json; the Files tab comes
-from file_catalog.py. Run view_dashboard.bat to rebuild and open the page.
+from file_catalog.py and the Progress tab from progress.py. Run
+view_dashboard.bat to rebuild and open the page.
 """
 import json
 import sys
 from pathlib import Path
 
 from file_catalog import catalog
+from progress import progress
 
 here = Path(__file__).resolve().parent
 repo = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else here.parents[1]
@@ -66,7 +68,7 @@ env = [
 ]
 
 data = {"source": "algorithm1/correlation-nn-summary.json", "rows": rows, "headline": headline,
-        "env": env, "files": catalog(repo)}
+        "env": env, "files": catalog(repo), "progress": progress(repo)}
 template = (here / "template.html").read_text(encoding="utf-8")
 out.write_text(template.replace("__DATA__", json.dumps(data)), encoding="utf-8")
 print(f"wrote {out} ({len(rows)} methods, {len(data['files'])} files)")

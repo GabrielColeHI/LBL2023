@@ -6,6 +6,8 @@ from the student handoff (environment log, headline-number ledger).
 | File | What it holds |
 |---|---|
 | [session-2026-10-27.md](session-2026-10-27.md) | What was done in the first working session, in order, and what's next |
+| [session-2026-11-10.md](session-2026-11-10.md) | Tensor networks, bigger images, C++; the image-size scaling benchmark and its caveats |
+| [run-scripts/](run-scripts/) | `run_all.bat`: one double-click reruns tests, figures, the scaling check and the dashboard |
 | [environment-log.md](environment-log.md) | T01 environment log: versions, test results, smoke runs, discrepancies |
 | [conventions.tex](conventions.tex) | T01 one-page Hamiltonian and measurement conventions, with code line references (compile with pdflatex or Overleaf) |
 | [headline-numbers.md](headline-numbers.md) | T01 ledger: handoff numbers traced to the JSON files that contain them |

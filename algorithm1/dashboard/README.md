@@ -10,6 +10,7 @@ existing page, open `dashboard.html` directly.
 |---|---|
 | `view_dashboard.bat` | Launcher: rebuild, then open the page |
 | `build_dashboard.py` | Reads `../correlation-nn-summary.json`, holds the headline-card and environment-log text, and writes `dashboard.html` |
+| `progress.py` | Builds the Progress tab: T01 checklist, discrepancies, the number ledger (re-checked against the JSON on every build), regenerated-figure comparisons and the scaling run |
 | `file_catalog.py` | Builds the Files tab: lists every repository file and extracts its description from the file itself |
 | `template.html` | Page layout, styling and script; the data is inserted at `__DATA__` |
 | `dashboard.html` | Generated output; don't edit it by hand |
@@ -17,6 +18,8 @@ existing page, open `dashboard.html` directly.
 **Tabs**
 
 - **Results:** neural-decoder study results, explanations, environment log and glossary.
+- **Progress:** T01 status, discrepancies for the PI, every handoff number traced
+  to its JSON key, figures regenerated from scratch, and the image-size scaling check.
 - **Files:** every file in the repository, grouped and searchable. ★ marks the
   handoff's start-here files.
 

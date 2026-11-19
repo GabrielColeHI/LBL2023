@@ -8,5 +8,7 @@ verified by a person. This feeds the journal's AI-use disclosure.
 | 2026-10-27 | Claude Code (Claude Opus 5.5) | Explain the repo and `run_demo.py` | Verbal explanation | Cross-check against `algorithm1/README.md` |
 | 2026-10-27 | Claude Code (Claude Opus 5.5) | Build the results dashboard | `algorithm1/dashboard/` | Values were traced to JSON by script; review the page and the method descriptions against `correlation-nn.md` |
 | 2026-10-27 | Claude Code (Claude Opus 5.5) | Rerun tests, check the environment log, trace headline numbers | `student-notes/environment-log.md`, `headline-numbers.md` | Spot-check a few ledger rows by opening the JSON yourself |
+| 2026-10-27 | Claude Code (Claude Opus 5.5) | Draft the one-page conventions note | `student-notes/conventions.tex` | Check each line against the cited code; re-derive the two-spin formula by hand |
+| 2026-11-10 | Claude Code (Claude Opus 5.5) | Advice on tensor networks, scaling and C++; write and review the image-size benchmark | `python/benchmark_sizes.py`, `results/student-scaling/`, `session-2026-11-10.md` | Rerun the script; confirm the R-hat values in `results.json` |
 
 Fill in the last column once you've done the check yourself.
